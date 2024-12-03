@@ -1,7 +1,45 @@
-# Express-pairing-code
-Baileys Session Gen Using Express
+### Full Featured Web Pair API / Baileys Pair Code
 
+Xstro Session Generator provides an easy and reliable way to generate and manage Baileys session using the latest version of `@whiskeysockets/baileys`.
 
-session.guruapi.tech is using this repo , so don't disturb me by asking if i use any other repo for session 
+### About
 
-![image](https://github.com/user-attachments/assets/4d45804c-3d44-4f54-b74d-95617f28e2ef)
+-    **Session Persistence**: Auto saves and load session data for easy use.
+-    **Lightweight & Fast**: Built with a minimal footprint using Node.js and `@whiskeysockets/baileys`.
+-    **Web Interface**: Accessible Web interface for pairing.
+
+### Installation
+
+#### Clone the Repository (Local)
+
+```bash
+git clone https://github.com/AstroX11/XstroSession
+cd XstroSession
+```
+
+#### Install Dependencies with Yarn
+
+```bash
+yarn install
+```
+
+#### Start the Server
+
+```bash
+npm start
+```
+
+### Usage
+
+-    Access the web interface by navigating to `http://localhost:3000` after starting the server.
+-    Use the pair code to connect to WA, your creds are saved locally.
+
+### Requirements
+
+-    Node.js (v18+)
+-    Yarn (for dependency management)
+-    Git (for cloning the repository)
+
+### License
+
+This project is licensed under [MIT License](LICENSE).
