@@ -45,16 +45,14 @@ let clearState = () => {
 	fs.removeSync(sessionFolder);
 };
 
-const uploadFolder = join(__dirname, 'upload');
+const uploadFolder = join(__dirname, 'uploads');
 if (!fs.existsSync(uploadFolder)) fs.mkdirSync(uploadFolder);
 
 function generateAccessKey() {
 	const formatNumber = num => num.toString().padStart(2, '0');
-
 	const r1 = formatNumber(Math.floor(Math.random() * 100));
 	const r2 = formatNumber(Math.floor(Math.random() * 100));
 	const r3 = formatNumber(Math.floor(Math.random() * 100));
-
 	return `XSTRO_${r1}_${r2}_${r3}`;
 }
 
@@ -63,6 +61,17 @@ app.get('/pair', async (req, res) => {
 	if (!phone) return res.json({ error: 'Provide Valid Phone Number' });
 	const code = await getPairingCode(phone);
 	res.json({ code: code });
+});
+
+app.get('/uploads/:accessKey/:file', async (req, res) => {
+	const { accessKey, file } = req.params;
+	const filePath = join(uploadFolder, accessKey, file);
+
+	if (fs.existsSync(filePath)) {
+		res.sendFile(filePath);
+	} else {
+		res.status(404).json({ error: 'File not found' });
+	}
 });
 
 app.get('/session/:key', async (req, res) => {
