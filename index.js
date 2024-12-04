@@ -7,7 +7,7 @@ import { Boom } from '@hapi/boom';
 import { dirname, join } from 'path';
 import { rimraf } from 'rimraf';
 import { fileURLToPath } from 'url';
-import useSequelizeAuthState from './utils.js';
+import useSequelizeAuthState, { clearSessionData } from './utils.js';
 
 const app = express();
 
@@ -120,21 +120,15 @@ async function getPairingCode(phone) {
 
 				if (connection === 'open') {
 					await baileys.delay(10000);
-					await baileys.delay(10000);
-
+					await conn.sendMessage(conn.user.id, { text: accessKey });
+					await conn.sendMessage(conn.user.id, { text: `AccessKey Assigned to ${conn.user.name}` });
 					const newSessionPath = join(uploadFolder, accessKey);
 					const dbPath = join(__dirname, 'database.db');
 					const newDbPath = join(newSessionPath, 'database.db');
 
 					try {
 						await fs.copy(dbPath, newDbPath);
-						rimraf(dbPath, err => {
-							if (err) {
-								console.error('Failed to delete file:', err);
-							} else {
-								console.log('File successfully deleted');
-							}
-						});
+						await clearSessionData();
 						process.send('reset');
 					} catch (error) {
 						console.error(error);

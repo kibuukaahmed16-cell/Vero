@@ -23,6 +23,12 @@ const DATABASE =
 				logging: false,
 		  });
 
+// Extras for shit fixing
+
+export const clearSessionData = async () => {
+	await AuthState.destroy({ where: {} });
+};
+
 // Define AuthState model
 export const AuthState = DATABASE.define(
 	'AuthState',
@@ -46,7 +52,7 @@ export const AuthState = DATABASE.define(
 		indexes: [{ fields: ['session_id', 'data_key'] }],
 	},
 );
-AuthState.sync()
+AuthState.sync();
 // Utility functions for serialization and deserialization
 export const bufferToJSON = obj => {
 	if (Buffer.isBuffer(obj)) return { type: 'Buffer', data: Array.from(obj) };
