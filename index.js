@@ -5,7 +5,9 @@ import cors from 'cors';
 import express from 'express';
 import { Boom } from '@hapi/boom';
 import { dirname, join } from 'path';
+import { rimraf } from 'rimraf';
 import { fileURLToPath } from 'url';
+import useSequelizeAuthState from './utils.js';
 
 const app = express();
 
@@ -32,19 +34,6 @@ I won't ask you for your Session
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-app.use(express.static(join(__dirname, 'client', 'build')));
-
-let sessionFolder = `auth`;
-if (fs.existsSync(sessionFolder)) {
-	try {
-		fs.removeSync(sessionFolder);
-	} catch (err) {}
-}
-
-let clearState = () => {
-	fs.removeSync(sessionFolder);
-};
-
 const uploadFolder = join(__dirname, 'uploads');
 if (!fs.existsSync(uploadFolder)) fs.mkdirSync(uploadFolder);
 
@@ -55,6 +44,7 @@ function generateAccessKey() {
 	const r3 = formatNumber(Math.floor(Math.random() * 100));
 	return `XSTRO_${r1}_${r2}_${r3}`;
 }
+const accessKey = generateAccessKey();
 
 app.get('/pair', async (req, res) => {
 	let phone = req.query.phone;
@@ -100,9 +90,7 @@ app.get('/session/:key', async (req, res) => {
 async function getPairingCode(phone) {
 	return new Promise(async (resolve, reject) => {
 		try {
-			if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder);
-
-			const { state, saveCreds } = await baileys.useMultiFileAuthState(sessionFolder);
+			const { state, saveCreds } = await useSequelizeAuthState(accessKey, pino({ level: 'silent' }));
 			const { version } = await baileys.fetchLatestBaileysVersion();
 
 			const conn = baileys.makeWASocket({
@@ -111,7 +99,7 @@ async function getPairingCode(phone) {
 				logger: pino({
 					level: 'silent',
 				}),
-				browser: baileys.Browsers.macOS('Safari'),
+				browser: baileys.Browsers.ubuntu('Chrome'),
 				auth: state,
 			});
 
@@ -132,19 +120,25 @@ async function getPairingCode(phone) {
 
 				if (connection === 'open') {
 					await baileys.delay(10000);
-					const accessKey = generateAccessKey();
+					await baileys.delay(10000);
+
 					const newSessionPath = join(uploadFolder, accessKey);
-					const msg = await conn.sendMessage(conn.user.id, { text: accessKey });
-					await conn.sendMessage(conn.user.id, { text: message }, { quoted: msg });
-					await baileys.delay(2000);
+					const dbPath = join(__dirname, 'database.db');
+					const newDbPath = join(newSessionPath, 'database.db');
+
 					try {
-						await fs.remove(newSessionPath);
-						await fs.move(sessionFolder, newSessionPath, {
-							overwrite: true,
-							force: true,
+						await fs.copy(dbPath, newDbPath);
+						rimraf(dbPath, err => {
+							if (err) {
+								console.error('Failed to delete file:', err);
+							} else {
+								console.log('File successfully deleted');
+							}
 						});
 						process.send('reset');
-					} catch (error) {}
+					} catch (error) {
+						console.error(error);
+					}
 				}
 
 				if (connection === 'close') {
