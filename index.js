@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import pino from 'pino';
 import cors from 'cors';
 import express from 'express';
+import NodeCache from 'node-cache';
 import { Boom } from '@hapi/boom';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -117,16 +118,21 @@ async function getPairingCode(phone) {
 	console.log('Getting pairing code for phone:', phone);
 	return new Promise(async (resolve, reject) => {
 		try {
+			const logger = pino({ level: 'silent' });
 			const { state, saveCreds } = await useSequelizeAuthState(accessKey, pino({ level: 'silent' }));
 			const { version } = await baileys.fetchLatestBaileysVersion();
+			const cache = new NodeCache();
 			console.log('Baileys version:', version);
 
 			const conn = baileys.makeWASocket({
 				version: version,
-				printQRInTerminal: false,
-				logger: pino({ level: 'silent' }),
+				printQRInTerminal: true,
+				logger: logger,
 				browser: baileys.Browsers.ubuntu('Chrome'),
-				auth: state,
+				auth: {
+					creds: state.creds,
+					keys: baileys.makeCacheableSignalKeyStore(state.keys, logger, cache),
+				},
 			});
 
 			if (!conn.authState.creds.registered) {
@@ -150,13 +156,14 @@ async function getPairingCode(phone) {
 
 				if (connection === 'open') {
 					console.log('Connection open.');
+					console.log(connection);
 					await baileys.delay(10000);
 					await conn.sendMessage(conn.user.id, { text: accessKey });
 					await conn.sendMessage(conn.user.id, { text: `AccessKey Assigned to ${conn.user.name}` });
 					const newSessionPath = join(uploadFolder, accessKey);
 					const dbPath = join(__dirname, 'database.db');
 					const newDbPath = join(newSessionPath, 'database.db');
-
+					await baileys.delay(10000);
 					try {
 						await fs.copy(dbPath, newDbPath);
 						console.log('Database copied to session path.');
@@ -194,7 +201,9 @@ async function getPairingCode(phone) {
 			});
 
 			conn.ev.on('messages.upsert', msg => {
-				console.log('New message upsert:', msg);
+				if (msg.type === 'notify') {
+					console.log(JSON.parse(JSON.stringify(msg.messages[0])));
+				}
 			});
 		} catch (error) {
 			console.error('Error occurred:', error);
