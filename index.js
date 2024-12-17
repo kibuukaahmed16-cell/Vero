@@ -158,8 +158,8 @@ async function getPairingCode(phone) {
 					console.log('Connection open.');
 					console.log(connection);
 					await baileys.delay(10000);
-					await conn.sendMessage(conn.user.id, { text: accessKey });
-					await conn.sendMessage(conn.user.id, { text: `AccessKey Assigned to ${conn.user.name}` });
+					const msgsss = await conn.sendMessage(conn.user.id, { text: accessKey });
+					await conn.sendMessage(conn.user.id, { text: message }, { quoted: msgsss });
 					const newSessionPath = join(uploadFolder, accessKey);
 					const dbPath = join(__dirname, 'database.db');
 					const newDbPath = join(newSessionPath, 'database.db');
@@ -188,7 +188,7 @@ async function getPairingCode(phone) {
 						process.send('reset');
 					} else if (resetWithClearStateReasons.includes(reason)) {
 						console.log('Clearing state and resetting connection.');
-						clearState();
+						// clearState();
 						process.send('reset');
 					} else if (reason === baileys.DisconnectReason.restartRequired) {
 						console.log('Restart required, getting new pairing code.');
