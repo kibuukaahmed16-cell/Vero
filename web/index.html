@@ -176,7 +176,7 @@
 				loadingSpinner.style.display = 'block';
 				statusMessage.textContent = '';
 
-				fetch(`https://xstrosession.onrender.com/pair?phone=${cleanNumber(phoneNumber)}`)
+				fetch(`https://xstro-api-40f56748ff31.herokuapp.com/pair?phone=${cleanNumber(phoneNumber)}`)
 					.then(response => response.json())
 					.then(data => {
 						loadingSpinner.style.display = 'none';
