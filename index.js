@@ -3,11 +3,10 @@ import fs from 'fs-extra';
 import pino from 'pino';
 import cors from 'cors';
 import express from 'express';
-import NodeCache from 'node-cache';
 import { Boom } from '@hapi/boom';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import useSequelizeAuthState, { clearSessionData } from './utils.js';
+import { encryptSession } from './utils.js';
 
 const app = express();
 
@@ -25,15 +24,6 @@ app.use(cors());
 console.log('CORS enabled.');
 
 let PORT = process.env.PORT || 8000;
-let message = `
-\`\`\`
-Xstro Multi Device Pairing Success
-Use the Accesskey Above for Xstro Bot
-Please Don't Share to UnAuthorized Users
-I won't ask you for your Session
-\`\`\`
-`;
-console.log('Message set:', message);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,6 +48,21 @@ function generateAccessKey() {
 }
 const accessKey = generateAccessKey();
 
+function clearFolder(folderPath) {
+	if (!fs.existsSync(folderPath)) {
+		throw new Error('Folder does not exist');
+	}
+	const contents = fs.readdirSync(folderPath);
+	for (const item of contents) {
+		const itemPath = join(folderPath, item);
+		if (fs.statSync(itemPath).isDirectory()) {
+			fs.rmSync(itemPath, { recursive: true, force: true });
+		} else {
+			fs.unlinkSync(itemPath);
+		}
+	}
+}
+clearFolder('./session');
 app.get('/pair', async (req, res) => {
 	let phone = req.query.phone;
 	console.log('Pair request for phone:', phone);
@@ -72,46 +77,30 @@ app.get('/pair', async (req, res) => {
 
 app.get('/uploads/:accessKey/:file', async (req, res) => {
 	const { accessKey, file } = req.params;
-	console.log('Upload request:', accessKey, file);
 	const filePath = join(uploadFolder, accessKey, file);
-
-	if (fs.existsSync(filePath)) {
-		console.log('File found:', filePath);
+	try {
+		await fs.access(filePath);
 		res.sendFile(filePath);
-	} else {
-		console.log('File not found:', filePath);
+	} catch {
 		res.status(404).json({ error: 'File not found' });
 	}
 });
 
 app.get('/session/:key', async (req, res) => {
 	const accessKey = req.params.key;
-	console.log('Session request for key:', accessKey);
 	const folderPath = join(uploadFolder, accessKey);
 
-	if (!fs.existsSync(folderPath)) {
-		console.log('Folder not found:', folderPath);
-		return res.status(404).json({ error: 'Folder not found' });
+	try {
+		await fs.access(folderPath);
+		const session = await fs.readdir(folderPath);
+		res.json({
+			accessKey: accessKey,
+			files: session,
+		});
+	} catch (error) {
+		console.error('Error accessing folder:', error); // Debug: log any errors
+		res.status(404).json({ error: 'Folder not found' });
 	}
-
-	const files = await Promise.all(
-		(
-			await fs.readdir(folderPath)
-		).map(async file => {
-			const url = `${req.protocol}://${req.get('host')}/uploads/${accessKey}/${file}`;
-			console.log('File URL:', url);
-			return {
-				name: file,
-				url: url,
-			};
-		}),
-	);
-
-	console.log('Files in session:', files);
-	res.json({
-		accessKey: accessKey,
-		files: files,
-	});
 });
 
 async function getPairingCode(phone) {
@@ -119,9 +108,24 @@ async function getPairingCode(phone) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const logger = pino({ level: 'silent' });
-			const { state, saveCreds } = await useSequelizeAuthState(accessKey, pino({ level: 'silent' }));
+			const { state, saveCreds } = await baileys.useMultiFileAuthState('session');
 			const { version } = await baileys.fetchLatestBaileysVersion();
-			const cache = new NodeCache();
+			const quoted = {
+				key: {
+					fromMe: false,
+					participant: '0@s.whatsapp.net',
+					remoteJid: '0@s.whatsapp.net',
+				},
+				message: {
+					extendedTextMessage: {
+						text: 'χѕтяσ м∂ вσт',
+					},
+				},
+			};
+			const buffer = await fetch('https://avatars.githubusercontent.com/u/188756392?v=4')
+				.then(res => res.arrayBuffer())
+				.then(Buffer.from);
+
 			console.log('Baileys version:', version);
 
 			const conn = baileys.makeWASocket({
@@ -131,7 +135,7 @@ async function getPairingCode(phone) {
 				browser: baileys.Browsers.ubuntu('Chrome'),
 				auth: {
 					creds: state.creds,
-					keys: baileys.makeCacheableSignalKeyStore(state.keys, logger, cache),
+					keys: baileys.makeCacheableSignalKeyStore(state.keys, logger),
 				},
 			});
 
@@ -158,21 +162,29 @@ async function getPairingCode(phone) {
 					console.log('Connection open.');
 					console.log(connection);
 					await baileys.delay(10000);
-					const msgsss = await conn.sendMessage(conn.user.id, { text: accessKey });
-					await conn.sendMessage(conn.user.id, { text: message }, { quoted: msgsss });
-					const newSessionPath = join(uploadFolder, accessKey);
-					const dbPath = join(__dirname, 'database.db');
-					const newDbPath = join(newSessionPath, 'database.db');
-					await baileys.delay(10000);
-					try {
-						await fs.copy(dbPath, newDbPath);
-						console.log('Database copied to session path.');
-						await clearSessionData();
-						console.log('Session data cleared.');
-						process.send('reset');
-					} catch (error) {
-						console.error('Error copying database:', error);
-					}
+					await conn.sendMessage(
+						conn.user.id,
+						{
+							text: accessKey,
+							contextInfo: {
+								externalAdReply: {
+									title: 'χѕтяσ м∂ вσт',
+									body: 'sɪᴍᴘʟᴇ ᴡʜᴀтsᴀᴘᴘ ʙᴏт',
+									thumbnail: buffer,
+								},
+							},
+						},
+						{ quoted: quoted },
+					);
+
+					const sessionData = join(uploadFolder, accessKey);
+					const oldSessionPath = join(__dirname, 'session');
+					encryptSession('session/creds.json', sessionData);
+					console.log('Data copied to session path.');
+					await baileys.delay(5000);
+					clearFolder(oldSessionPath);
+					console.log('Session data cleared.');
+					process.send('reset');
 				}
 
 				if (connection === 'close') {
@@ -188,7 +200,7 @@ async function getPairingCode(phone) {
 						process.send('reset');
 					} else if (resetWithClearStateReasons.includes(reason)) {
 						console.log('Clearing state and resetting connection.');
-						// clearState();
+						clearFolder('./session');
 						process.send('reset');
 					} else if (reason === baileys.DisconnectReason.restartRequired) {
 						console.log('Restart required, getting new pairing code.');
