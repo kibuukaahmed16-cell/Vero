@@ -29,6 +29,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const uploadFolder = join(__dirname, 'uploads');
+
+function mkUpp() {
+	if (!fs.existsSync(uploadFolder)) {
+		fs.mkdirSync(uploadFolder);
+		console.log('Upload folder created:', uploadFolder);
+	} else {
+		console.log('Upload folder already exists:', uploadFolder);
+	}
+}
+mkUpp();
 if (!fs.existsSync(uploadFolder)) {
 	fs.mkdirSync(uploadFolder);
 	console.log('Upload folder created:', uploadFolder);
@@ -49,9 +59,7 @@ function generateAccessKey() {
 const accessKey = generateAccessKey();
 
 function clearFolder(folderPath) {
-	if (!fs.existsSync(folderPath)) {
-		throw new Error('Folder does not exist');
-	}
+	if (!fs.existsSync(folderPath)) return;
 	const contents = fs.readdirSync(folderPath);
 	for (const item of contents) {
 		const itemPath = join(folderPath, item);
