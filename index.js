@@ -7,6 +7,7 @@ import { Boom } from '@hapi/boom';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { encryptSession } from './utils.js';
+import { getSession, saveSession } from './db.js';
 
 const app = express();
 
@@ -26,17 +27,6 @@ let PORT = process.env.PORT || 8000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const uploadFolder = join(__dirname, 'uploads');
-
-function mkUpp() {
-	if (!fs.existsSync(uploadFolder)) {
-		fs.mkdirSync(uploadFolder);
-	} 
-}
-mkUpp();
-if (!fs.existsSync(uploadFolder)) {
-	fs.mkdirSync(uploadFolder);
-}
 function generateAccessKey() {
 	const formatNumber = num => num.toString().padStart(2, '0');
 	const r1 = formatNumber(Math.floor(Math.random() * 100));
@@ -69,31 +59,20 @@ app.get('/pair', async (req, res) => {
 	res.json({ code: code });
 });
 
-app.get('/uploads/:accessKey/:file', async (req, res) => {
-	const { accessKey, file } = req.params;
-	const filePath = join(uploadFolder, accessKey, file);
-	try {
-		await fs.access(filePath);
-		res.sendFile(filePath);
-	} catch {
-		res.status(404).json({ error: 'File not found' });
+app.get('/session', async (req, res) => {
+	const accessKey = req.query.session;
+
+	if (!accessKey) {
+		return res.status(401).json({ error: 'No session provided' });
 	}
-});
-
-app.get('/session/:key', async (req, res) => {
-	const accessKey = req.params.key;
-	const folderPath = join(uploadFolder, accessKey);
-
 	try {
-		await fs.access(folderPath);
-		const session = await fs.readdir(folderPath);
-		res.json({
-			accessKey: accessKey,
-			files: session
-		});
+		const sessionData = await getSession(accessKey);
+		if (!sessionData) {
+			return res.status(401).json({ error: 'Invalid session' });
+		}
+		res.json(sessionData);
 	} catch (error) {
-		console.error('Error accessing folder:', error); // Debug: log any errors
-		res.status(404).json({ error: 'Folder not found' });
+		res.status(500).json({ error: 'Server error' });
 	}
 });
 
@@ -162,11 +141,10 @@ async function getPairingCode(phone) {
 						{ quoted: quoted }
 					);
 
-					const sessionData = join(uploadFolder, accessKey);
-					const oldSessionPath = join(__dirname, 'session');
-					encryptSession('session/creds.json', sessionData);
+					const data = encryptSession('session/creds.json');
+					await saveSession(accessKey, data);
 					await baileys.delay(5000);
-					clearFolder(oldSessionPath);
+					clearFolder(join(__dirname, 'session'));
 					process.send('reset');
 				}
 

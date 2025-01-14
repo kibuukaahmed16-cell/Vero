@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import { dirname, join } from 'node:path';
 
-function encryptSession(initSession = 'creds.json', output) {
+function encryptSession(initSession = 'creds.json') {
 	const baseDir = dirname(initSession);
 
 	// Read credentials file
@@ -47,13 +47,7 @@ function encryptSession(initSession = 'creds.json', output) {
 			syncKeys: appStateFiles
 		}
 	};
-
-	// Create output directory and save encrypted data
-	mkdirSync(output, { recursive: true });
-	const encryptedPath = join(output, 'session.json');
-	writeFileSync(encryptedPath, JSON.stringify(sessionData, null, 2));
-
-	return sessionData;
+	return JSON.stringify(sessionData, null, 2);
 }
 
 function decryptSession(sessionSource = 'session.json', outputDir = './session') {

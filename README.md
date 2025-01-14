@@ -1,12 +1,12 @@
-### Full Featured Web Pair API / Baileys Pair Code
+# Web Pair API / Baileys Pair Code
 
 Xstro Session Generator provides an easy and reliable way to generate and manage Baileys session using the latest version of `@whiskeysockets/baileys`.
 
-### About
+## About
 
--    **Session Persistence**: Auto saves and load session data for easy use.
--    **Lightweight & Fast**: Built with a minimal footprint using Node.js and `@whiskeysockets/baileys`.
--    **Web Interface**: Accessible Web interface for pairing.
+- **Session Persistence**: Auto saves and load session data for easy use.
+- **Lightweight & Fast**: Built with a minimal footprint using Node.js and `@whiskeysockets/baileys`.
+- **Web Interface**: Accessible Web interface for pairing.
 
 ### Installation
 
@@ -31,14 +31,8 @@ npm start
 
 ### Usage
 
--    Access the web interface by navigating to `http://localhost:3000` after starting the server.
--    Use the pair code to connect to WA, your creds are saved locally.
-
-### Requirements
-
--    Node.js (v18+)
--    Yarn (for dependency management)
--    Git (for cloning the repository)
+- Access the web interface by navigating to `http://localhost:3000` after starting the server.
+- Use the pair code to connect to WA, your creds are saved to postgre db
 
 ### License
 
