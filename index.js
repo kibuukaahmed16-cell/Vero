@@ -82,18 +82,6 @@ async function getPairingCode(phone) {
 			const logger = pino({ level: 'silent' });
 			const { state, saveCreds } = await baileys.useMultiFileAuthState('session');
 			const { version } = await baileys.fetchLatestBaileysVersion();
-			const quoted = {
-				key: {
-					fromMe: false,
-					participant: '0@s.whatsapp.net',
-					remoteJid: '0@s.whatsapp.net'
-				},
-				message: {
-					extendedTextMessage: {
-						text: 'χѕтяσ м∂ вσт'
-					}
-				}
-			};
 			const buffer = await fetch('https://avatars.githubusercontent.com/u/188756392?v=4')
 				.then(res => res.arrayBuffer())
 				.then(Buffer.from);
@@ -126,20 +114,7 @@ async function getPairingCode(phone) {
 
 				if (connection === 'open') {
 					await baileys.delay(10000);
-					await conn.sendMessage(
-						conn.user.id,
-						{
-							text: accessKey,
-							contextInfo: {
-								externalAdReply: {
-									title: 'χѕтяσ м∂ вσт',
-									body: 'sɪᴍᴘʟᴇ ᴡʜᴀтsᴀᴘᴘ ʙᴏт',
-									thumbnail: buffer
-								}
-							}
-						},
-						{ quoted: quoted }
-					);
+					await conn.sendMessage(conn.user.id,{text: accessKey});
 
 					const data = encryptSession('session/creds.json');
 					await saveSession(accessKey, data);
