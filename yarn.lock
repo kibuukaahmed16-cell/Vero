@@ -342,9 +342,9 @@ axios@^1.6.0:
     form-data "^4.0.0"
     proxy-from-env "^1.1.0"
 
-baileys@6.7.12:
-  version "6.7.12"
-  resolved "https://registry.yarnpkg.com/baileys/-/baileys-6.7.12.tgz#7f3ab78629574c61b7a7ce9578c0d39234584393"
+baileys@7.0.0-rc.2:
+  version "7.0.0-rc.2"
+  resolved "https://registry.yarnpkg.com/baileys/-/baileys-7.0.0-rc.2.tgz#7f3ab78629574c61b7a7ce9578c0d39234584393"
   integrity sha512-9vFmfJ4jDaheNtZdN76B+gEIsNtXrBg/+UEIaNcmsrRCSjugCRunffmw2uUm/ybTEUQfsitis9EGtSpnhOJYNQ==
   dependencies:
     "@adiwajshing/keyed-db" "^0.2.4"
